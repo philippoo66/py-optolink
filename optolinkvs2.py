@@ -47,7 +47,7 @@ def init_vs2(ser:serial.Serial) -> bool:
     return True
 
 
-def read_data(addr:int, readlen:int, ser:serial.Serial) -> bytes:
+def read_data(addr:int, rdlen:int, ser:serial.Serial) -> bytes:
     outbuff = bytearray(8)
     outbuff[0] = 0x41   # 0x41 Telegrammstart
     outbuff[1] = 0x05   # Len Nutzdaten, hier immer 5
@@ -55,18 +55,19 @@ def read_data(addr:int, readlen:int, ser:serial.Serial) -> bytes:
     outbuff[3] = 0x01   # 0x01 Lesen
     outbuff[4] = (addr >> 8) & 0xFF  # hi byte
     outbuff[5] = addr & 0xFF         # lo byte
-    outbuff[6] = readlen   # Anzahl der zu lesenden Daten-Bytes
+    outbuff[6] = rdlen   # Anzahl der zu lesenden Daten-Bytes
     outbuff[7] = calc_crc(outbuff)
 
     ser.reset_input_buffer()
     # After message is send, 
     ser.write(outbuff)
+    print("R tx", bbbstr(outbuff))
 
     # for up 30x100ms serial data is read.
     i = 0
     state = 0
     inbuff = []
-    while(i < 30):
+    while(True):
         time.sleep(0.1)
         inbuff += ser.read(ser.in_waiting)
 
@@ -86,17 +87,78 @@ def read_data(addr:int, readlen:int, ser:serial.Serial) -> bytes:
         if(state == 2):
             dlen = inbuff[2]
             if(len(inbuff) >= dlen+4):  # 0x06 + 0x41 + Len + Nutzdaten + CRC
+                print("R rx", bbbstr(inbuff))
                 crc = inbuff[dlen+3] 
                 if(crc != calc_crc(inbuff)):
                     print("CRC Error")
                     return []
-                return inbuff[8:8+readlen]
+                if(inbuff[3] & 0x0F == 0x03):
+                    print("Error Message")
+                    return []
+                return inbuff[8:8+rdlen]
 
         i+=1
+        if(i == 30):
+            print("Timeout")
+            return []
 
-    if(i == 30):
-        print("Timeout")
-        return []
+
+def write_data(addr:int, data:bytes, ser:serial.Serial) -> bool:
+    wrlen = len(data)
+    outbuff = bytearray(wrlen+8)
+    outbuff[0] = 0x41   # 0x41 Telegrammstart
+    outbuff[1] = 5 + wrlen    #
+    outbuff[2] = 0x00   # 0x00 Anfrage
+    outbuff[3] = 0x02   # 0x02 Schreiben
+    outbuff[4] = (addr >> 8) & 0xFF  # hi byte
+    outbuff[5] = addr & 0xFF         # lo byte
+    outbuff[6] = wrlen  # Anzahl der zu schreibenden Daten-Bytes
+    for i in range(int(wrlen)):
+        outbuff[7 + i] = data[i]
+    outbuff[7 + wrlen] = calc_crc(outbuff)
+
+    ser.write(outbuff)
+    print("W tx", bbbstr(outbuff))
+
+    # for up 30x100ms serial data is read.
+    i = 0
+    state = 0
+    inbuff = []
+    while(True):
+        time.sleep(0.1)
+        inbuff += ser.read(ser.in_waiting)
+
+        if(state == 0):
+            if(len(inbuff) > 0):
+                if(inbuff[0] == 0x06): # VS2_ACK
+                    state = 1
+                elif (inbuff[0] == 0x15): # VS2_NACK
+                    return False
+        
+        if(state == 1):
+            if(len(inbuff) > 2):
+                if(inbuff[1] != 0x41): # STX
+                    return False
+                state = 2
+
+        if(state == 2):
+            dlen = inbuff[2]
+            if(len(inbuff) >= dlen+4):  # 0x06 + 0x41 + Len + Nutzdaten + CRC
+                print("W rx", bbbstr(inbuff))
+                crc = inbuff[dlen+3] 
+                if(crc != calc_crc(inbuff)):
+                    print("CRC Error")
+                    return False
+                if(inbuff[3] & 0x0F == 0x03):
+                    print("Error Message")
+                    return False
+                return True
+
+        i+=1
+        if(i == 30):
+            print("Timeout")
+            return False
+
 
 
 def calc_crc(telegram):
@@ -141,21 +203,82 @@ def main():
 
         if not init_vs2(ser):
             raise Exception("init_vs2 failed.")
+        
+        # read test
+        # while(True):
+        #     buff = read_data(0x00f8, 8, ser)
+        #     print("0x00f8", bbbstr(buff))
 
-        while(True):
-            buff = read_data(0x00f8, 8, ser)
-            print("0x00f8", bbbstr(buff))
+        #     buff = read_data(0x0800, 2, ser)
+        #     print("AT", bbbstr(buff), bytesval(buff, 10))
 
-            buff = read_data(0x0800, 2, ser)
-            print("AT", bbbstr(buff), bytesval(buff, 10))
+        #     buff = read_data(0x0804, 2, ser)
+        #     print("WW", bbbstr(buff), bytesval(buff, 10))
 
-            buff = read_data(0x0804, 2, ser)
-            print("WW", bbbstr(buff), bytesval(buff, 10))
+        #     time.sleep(1)
 
-            time.sleep(1)
+
+        # write test
+        print("/nwrite test 150 +++++++++++++++++++++++++++++++++++")
+        buff = read_data(0x6300, 1, ser)
+        currval = buff
+        print("Soll Ist", bbbstr(buff), bytesval(buff))
+        
+        time.sleep(0.5)
+
+        data = bytes([150])
+        ret = write_data(0x6300, data, ser)
+        print("write succ", ret)
+
+        time.sleep(0.5)
+
+        buff = read_data(0x6300, 1, ser)
+        print("Soll neu", bbbstr(buff), bytesval(buff))
+
+        time.sleep(0.5)
+
+        ret = write_data(0x6300, currval, ser)
+        print("write back succ", ret)
+
+        time.sleep(0.5)
+
+        buff = read_data(0x6300, 1, ser)
+        print("Soll read back", bbbstr(buff), bytesval(buff))
+
+
+        print("/nwrite test 50 +++++++++++++++++++++++++++++++++++")
+        buff = read_data(0x6300, 1, ser)
+        currval = buff
+        print("Soll Ist", bbbstr(buff), bytesval(buff))
+        
+        time.sleep(0.5)
+
+        data = bytes([50])
+        ret = write_data(0x6300, data, ser)
+        print("write succ", ret)
+
+        time.sleep(0.5)
+
+        buff = read_data(0x6300, 1, ser)
+        print("Soll neu", bbbstr(buff), bytesval(buff))
+
+        time.sleep(0.5)
+
+        ret = write_data(0x6300, currval, ser)
+        print("write back succ", ret)
+
+        time.sleep(0.5)
+
+        buff = read_data(0x6300, 1, ser)
+        print("Soll read back", bbbstr(buff), bytesval(buff))
+
+
+
 
     except KeyboardInterrupt:
         print("\nAufzeichnung beendet.")
+    except:
+        pass
     finally:
         # Serial Port schließen
         if ser.is_open:
