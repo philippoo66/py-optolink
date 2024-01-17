@@ -219,55 +219,34 @@ def main():
 
 
         # write test
-        print("/nwrite test 150 +++++++++++++++++++++++++++++++++++")
-        buff = read_data(0x6300, 1, ser)
-        currval = buff
-        print("Soll Ist", bbbstr(buff), bytesval(buff))
+        return
+        # ACHTUNG!!! hat mit kürzeren Pasenzeiten und auch unzulässig hohen Sollwert (150°C)
+        # unschöne Nachwirkungen ausgelöst!
+        # mein Umschaltventil ist plötzlich weg.
+        # NUR MIT GROSSER VORSICHT AUSPROBIEREN!!! und vlt besser nicht sequenziell
         
-        time.sleep(0.5)
-
-        data = bytes([150])
-        ret = write_data(0x6300, data, ser)
-        print("write succ", ret)
-
-        time.sleep(0.5)
-
-        buff = read_data(0x6300, 1, ser)
-        print("Soll neu", bbbstr(buff), bytesval(buff))
-
-        time.sleep(0.5)
-
-        ret = write_data(0x6300, currval, ser)
-        print("write back succ", ret)
-
-        time.sleep(0.5)
-
-        buff = read_data(0x6300, 1, ser)
-        print("Soll read back", bbbstr(buff), bytesval(buff))
-
-
         print("/nwrite test 50 +++++++++++++++++++++++++++++++++++")
         buff = read_data(0x6300, 1, ser)
         currval = buff
         print("Soll Ist", bbbstr(buff), bytesval(buff))
         
-        time.sleep(0.5)
+        time.sleep(1)
 
         data = bytes([50])
         ret = write_data(0x6300, data, ser)
         print("write succ", ret)
 
-        time.sleep(0.5)
+        time.sleep(2)
 
         buff = read_data(0x6300, 1, ser)
         print("Soll neu", bbbstr(buff), bytesval(buff))
 
-        time.sleep(0.5)
+        time.sleep(1)
 
         ret = write_data(0x6300, currval, ser)
         print("write back succ", ret)
 
-        time.sleep(0.5)
+        time.sleep(2)
 
         buff = read_data(0x6300, 1, ser)
         print("Soll read back", bbbstr(buff), bytesval(buff))
