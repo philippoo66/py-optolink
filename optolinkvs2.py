@@ -50,7 +50,7 @@ def init_vs2(ser:serial.Serial) -> bool:
 def read_data(addr:int, rdlen:int, ser:serial.Serial) -> bytes:
     outbuff = bytearray(8)
     outbuff[0] = 0x41   # 0x41 Telegrammstart
-    outbuff[1] = 0x05   # Len Nutzdaten, hier immer 5
+    outbuff[1] = 0x05   # Len Payload, hier immer 5
     outbuff[2] = 0x00   # 0x00 Anfrage
     outbuff[3] = 0x01   # 0x01 Lesen
     outbuff[4] = (addr >> 8) & 0xFF  # hi byte
@@ -107,7 +107,7 @@ def write_data(addr:int, data:bytes, ser:serial.Serial) -> bool:
     wrlen = len(data)
     outbuff = bytearray(wrlen+8)
     outbuff[0] = 0x41   # 0x41 Telegrammstart
-    outbuff[1] = 5 + wrlen    #
+    outbuff[1] = 5 + wrlen  # Len Payload
     outbuff[2] = 0x00   # 0x00 Anfrage
     outbuff[3] = 0x02   # 0x02 Schreiben
     outbuff[4] = (addr >> 8) & 0xFF  # hi byte
@@ -136,7 +136,7 @@ def write_data(addr:int, data:bytes, ser:serial.Serial) -> bool:
                     return False
         
         if(state == 1):
-            if(len(inbuff) > 2):
+            if(len(inbuff) > 2):  # Ack, STX, Len
                 if(inbuff[1] != 0x41): # STX
                     return False
                 state = 2
@@ -218,14 +218,9 @@ def main():
         #     time.sleep(1)
 
 
-        # write test
         return
-        # ACHTUNG!!! hat mit kürzeren Pasenzeiten und auch unzulässig hohen Sollwert (150°C)
-        # unschöne Nachwirkungen ausgelöst!
-        # mein Umschaltventil ist plötzlich weg.
-        # NUR MIT GROSSER VORSICHT AUSPROBIEREN!!! und vlt besser nicht sequenziell
-        
-        print("/nwrite test 50 +++++++++++++++++++++++++++++++++++")
+        # write test
+
         buff = read_data(0x6300, 1, ser)
         currval = buff
         print("Soll Ist", bbbstr(buff), bytesval(buff))
@@ -256,8 +251,8 @@ def main():
 
     except KeyboardInterrupt:
         print("\nAufzeichnung beendet.")
-    except:
-        pass
+    except Exception as e:
+        print(e)
     finally:
         # Serial Port schließen
         if ser.is_open:
