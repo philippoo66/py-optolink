@@ -76,6 +76,7 @@ def read_data(addr:int, rdlen:int, ser:serial.Serial) -> bytes:
                 if(inbuff[0] == 0x06): # VS2_ACK
                     state = 1
                 elif (inbuff[0] == 0x15): # VS2_NACK
+                    # hier müsste ggf noch ein eventueller Rest des Telegrams abgewartet werden 
                     return []
         
         if(state == 1):
@@ -133,6 +134,7 @@ def write_data(addr:int, data:bytes, ser:serial.Serial) -> bool:
                 if(inbuff[0] == 0x06): # VS2_ACK
                     state = 1
                 elif (inbuff[0] == 0x15): # VS2_NACK
+                    # hier müsste ggf noch ein eventueller Rest des Telegrams abgewartet werden 
                     return False
         
         if(state == 1):
