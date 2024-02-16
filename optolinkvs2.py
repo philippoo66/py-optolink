@@ -23,6 +23,7 @@ def init_vs2(ser:serial.Serial) -> bool:
         i+=1
 
     if(i == 30):
+        print("init_vs2: Timeout waiting for 0x05")
         return False
     
     ser.reset_input_buffer()
@@ -41,7 +42,7 @@ def init_vs2(ser:serial.Serial) -> bool:
         i+=1
 
     if(i == 30):
-        print("Timeout")
+        print("init_vs2: Timeout waiting for 0x06")
         return False
 
     return True
@@ -190,7 +191,7 @@ def bytesval(data, div=1, signd=True):
 
 # Hauptfunktion
 def main():
-    port = 'COM4'
+    port = '/dev/ttyUSB0' #'COM1'
 
     if(len(sys.argv) > 1):
         port = sys.argv[1]
@@ -207,52 +208,50 @@ def main():
             raise Exception("init_vs2 failed.")
         
         # read test
-        # while(True):
-        #     buff = read_data(0x00f8, 8, ser)
-        #     print("0x00f8", bbbstr(buff))
+        while(True):
+            buff = read_data(0x00f8, 8, ser)
+            print("0x00f8", bbbstr(buff))
+            time.sleep(0.1)
 
-        #     buff = read_data(0x0800, 2, ser)
-        #     print("AT", bbbstr(buff), bytesval(buff, 10))
+            buff = read_data(0x0802, 2, ser)
+            print("KT", bbbstr(buff), bytesval(buff, 10))
+            time.sleep(0.1)
 
-        #     buff = read_data(0x0804, 2, ser)
-        #     print("WW", bbbstr(buff), bytesval(buff, 10))
+            buff = read_data(0x0804, 2, ser)
+            print("WW", bbbstr(buff), bytesval(buff, 10))
+            time.sleep(1)
 
-        #     time.sleep(1)
 
-
-        return
         # write test
+        if(False)
+            buff = read_data(0x6300, 1, ser)
+            currval = buff
+            print("Soll Ist", bbbstr(buff), bytesval(buff))
+            
+            time.sleep(1)
 
-        buff = read_data(0x6300, 1, ser)
-        currval = buff
-        print("Soll Ist", bbbstr(buff), bytesval(buff))
-        
-        time.sleep(1)
+            data = bytes([50])
+            ret = write_data(0x6300, data, ser)
+            print("write succ", ret)
 
-        data = bytes([50])
-        ret = write_data(0x6300, data, ser)
-        print("write succ", ret)
+            time.sleep(2)
 
-        time.sleep(2)
+            buff = read_data(0x6300, 1, ser)
+            print("Soll neu", bbbstr(buff), bytesval(buff))
 
-        buff = read_data(0x6300, 1, ser)
-        print("Soll neu", bbbstr(buff), bytesval(buff))
+            time.sleep(1)
 
-        time.sleep(1)
+            ret = write_data(0x6300, currval, ser)
+            print("write back succ", ret)
 
-        ret = write_data(0x6300, currval, ser)
-        print("write back succ", ret)
+            time.sleep(2)
 
-        time.sleep(2)
+            buff = read_data(0x6300, 1, ser)
+            print("Soll read back", bbbstr(buff), bytesval(buff))
 
-        buff = read_data(0x6300, 1, ser)
-        print("Soll read back", bbbstr(buff), bytesval(buff))
-
-
-
-
+    
     except KeyboardInterrupt:
-        print("\nAufzeichnung beendet.")
+        print("\nGedoehns beendet.")
     except Exception as e:
         print(e)
     finally:
