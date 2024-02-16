@@ -223,7 +223,7 @@ def main():
 
 
         # write test
-        if(False)
+        if(False):
             buff = read_data(0x6300, 1, ser)
             currval = buff
             print("Soll Ist", bbbstr(buff), bytesval(buff))
