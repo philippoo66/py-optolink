@@ -114,7 +114,7 @@ def read_energy_testWO1C(wkday:int, ser:serial.Serial) -> bytes:
     outbuff[5] = addr & 0xFF         # lo byte
     outbuff[6] = 0x02   # Anzahl der Daten-Bytes
     outbuff[7] = 0x02   # procedure#
-    outbuff[8] = wkday & 0x07   # day of week
+    outbuff[8] = wkday & 0xFF   # day of week
     outbuff[9] = calc_crc(outbuff)
 
     ser.reset_input_buffer()
