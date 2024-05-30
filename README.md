@@ -5,7 +5,7 @@ experimental/test state currently
 
 currently only VS2/300 protocol
 
-reading datapoints working
+reading and writing datapoints working
 
 planed:
 - MQTT link
