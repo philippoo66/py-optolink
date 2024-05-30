@@ -225,7 +225,7 @@ def calc_crc(telegram):
 def bbbstr(data_buffer):
     return ' '.join([format(byte, '02X') for byte in data_buffer])
 
-def bytesval(data, div=1, signd=True):
+def bytesval(data, div=1, signd=False):
     return int.from_bytes(data, byteorder='little', signed=signd) / div
 
 
@@ -252,14 +252,15 @@ def main():
         if(True):
             for wday in range(1):
                 buff = read_energy_testWO1C(wday, ser)
-                print(f"day {wday}:", bbbstr(buff))
-                print(bytesval(buff[4:6], 1))
-                print(bytesval(buff[6:8], 1))
-                print(bytesval(buff[8:10], 1))
-                print(bytesval(buff[10:12], 1))
+                if(len(buff) > 19):
+                    print(f"day {wday}:", bbbstr(buff[12:-1]))
+                    print(bytesval(buff[12:14], 10))
+                    print(bytesval(buff[14:16], 10))
+                    print(bytesval(buff[16:18], 10))
+                    print(bytesval(buff[18:20], 10))
 
         # read test
-        while(True):
+        while(False):
             buff = read_datapoint(0x00f8, 8, ser)
             print("0x00f8", bbbstr(buff))
             time.sleep(0.1)
