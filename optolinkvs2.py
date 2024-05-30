@@ -252,7 +252,7 @@ def main():
         if(True):
             for wday in range(1):
                 buff = read_energy_testWO1C(wday, ser)
-                if(len(buff) > 19):
+                if(len(buff) > 20):
                     print(f"day {wday}:", bbbstr(buff[12:-1]))
                     print(bytesval(buff[12:14], 10))
                     print(bytesval(buff[14:16], 10))
