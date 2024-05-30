@@ -103,6 +103,67 @@ def read_data(addr:int, rdlen:int, ser:serial.Serial) -> bytes:
             print("Timeout")
             return []
 
+def read_energy_testWO1C(wkday:int, ser:serial.Serial) -> bytes:
+    addr = 0xb800
+    outbuff = bytearray(10)
+    outbuff[0] = 0x41   # 0x41 Telegrammstart
+    outbuff[1] = 0x07   # Len Payload
+    outbuff[2] = 0x00   # 0x00 Anfrage
+    outbuff[3] = 0x07   # 0x07 Remote_Proc_Req
+    outbuff[4] = (addr >> 8) & 0xFF  # hi byte
+    outbuff[5] = addr & 0xFF         # lo byte
+    outbuff[6] = 0x02   # Anzahl der Daten-Bytes
+    outbuff[7] = 0x02   # procedure#
+    outbuff[8] = wkday & 0x07   # day of week
+    outbuff[9] = calc_crc(outbuff)
+
+    ser.reset_input_buffer()
+    # After message is send, 
+    ser.write(outbuff)
+    print("R tx", bbbstr(outbuff))
+
+    # for up 30x100ms serial data is read.
+    i = 0
+    state = 0
+    inbuff = []
+    while(True):
+        time.sleep(0.1)
+        inbuff += ser.read(ser.in_waiting)
+
+        if(state == 0):
+            if(len(inbuff) > 0):
+                if(inbuff[0] == 0x06): # VS2_ACK
+                    state = 1
+                elif (inbuff[0] == 0x15): # VS2_NACK
+                    print("NACK received")
+                    # hier müsste ggf noch ein eventueller Rest des Telegrams abgewartet werden 
+                    return []
+        
+        if(state == 1):
+            if(len(inbuff) > 2):
+                if(inbuff[1] != 0x41): # STX
+                    print("STX Error")
+                    return []
+                state = 2
+
+        if(state == 2):
+            dlen = inbuff[2]
+            if(len(inbuff) >= dlen+4):  # 0x06 + 0x41 + Len + Nutzdaten + CRC
+                print("R rx", bbbstr(inbuff))
+                crc = inbuff[dlen+3] 
+                if(crc != calc_crc(inbuff)):
+                    print("CRC Error")
+                    return []
+                if(inbuff[3] & 0x0F == 0x03):
+                    print("Error Message")
+                    return []
+                return inbuff   #[8:8+rdlen]
+
+        i+=1
+        if(i == 30):
+            print("Timeout")
+            return []
+
 
 def write_data(addr:int, data:bytes, ser:serial.Serial) -> bool:
     wrlen = len(data)
@@ -206,6 +267,16 @@ def main():
         if not init_vs2(ser):
             raise Exception("init_vs2 failed.")
         
+        
+        if(True):
+            for wday in range(1):
+                buff = read_energy_testWO1C(wday, ser)
+                print(f"day {wday}:", bbbstr(buff))
+                print(bytesval(buff[4:6], 1))
+                print(bytesval(buff[6:8], 1))
+                print(bytesval(buff[8:10], 1))
+                print(bytesval(buff[10:12], 1))
+
         # read test
         # while(True):
         #     buff = read_data(0x00f8, 8, ser)
